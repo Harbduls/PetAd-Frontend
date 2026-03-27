@@ -44,9 +44,23 @@ describe("TimelineEntry", () => {
     // This ensures consistent snapshots regardless of when tests are run
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2025-03-26T11:00:00Z"));
+
+    vi.spyOn(Date.prototype, "toLocaleString").mockImplementation(function () {
+      return new Intl.DateTimeFormat("en-US", {
+        timeZone: "UTC",
+        year: "numeric",
+        month: "numeric",
+        day: "numeric",
+        hour: "numeric",
+        minute: "2-digit",
+        second: "2-digit",
+        hour12: true,
+      }).format(this);
+    });
   });
 
   afterEach(() => {
+    vi.restoreAllMocks();
     vi.useRealTimers();
   });
   it("renders regular entry correctly", () => {
