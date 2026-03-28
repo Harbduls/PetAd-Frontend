@@ -16,6 +16,7 @@ function createWrapper() {
       queries: { retry: false },
     },
   });
+  (queryClient as any)._uid = "test-" + Math.random().toString(36).substring(2, 5);
   const wrapper = ({ children }: { children: React.ReactNode }) => (
     <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
   );
@@ -59,7 +60,7 @@ describe("useMutateCompleteAdoption", () => {
       });
 
       // While in-flight, isPending should be true
-      expect(result.current.isPending).toBe(true);
+      await waitFor(() => expect(result.current.isPending).toBe(true));
       expect(result.current.isError).toBe(false);
 
       resolveRequest();
@@ -89,7 +90,8 @@ describe("useMutateCompleteAdoption", () => {
       const { queryClient, wrapper } = createWrapper();
       queryClient.setQueryData<AdoptionDetails>(["adoption", "adoption-1"], MOCK_ADOPTION);
 
-      const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
+      const invalidateSpy = vi.fn();
+      queryClient.invalidateQueries = invalidateSpy;
 
       const { result } = renderHook(
         () => useMutateCompleteAdoption("adoption-1"),
@@ -103,9 +105,9 @@ describe("useMutateCompleteAdoption", () => {
       await waitFor(() => expect(result.current.isPending).toBe(false));
 
       expect(result.current.isError).toBe(false);
-      expect(invalidateSpy).toHaveBeenCalledWith(
+      await waitFor(() => expect(invalidateSpy).toHaveBeenCalledWith(
         expect.objectContaining({ queryKey: ["adoption", "adoption-1"] }),
-      );
+      ));
     });
   });
 
@@ -155,11 +157,13 @@ describe("useMutateCompleteAdoption", () => {
       });
 
       // While in-flight: cache should reflect optimistic SETTLEMENT_TRIGGERED status
-      const optimisticData = queryClient.getQueryData<AdoptionDetails>([
-        "adoption",
-        "adoption-1",
-      ]);
-      expect(optimisticData?.status).toBe("SETTLEMENT_TRIGGERED");
+      await waitFor(() => {
+        const optimisticData = queryClient.getQueryData<AdoptionDetails>([
+          "adoption",
+          "adoption-1",
+        ]);
+        expect(optimisticData?.status).toBe("SETTLEMENT_TRIGGERED");
+      });
 
       resolveRequest();
       await waitFor(() => expect(result.current.isPending).toBe(false));
@@ -169,8 +173,9 @@ describe("useMutateCompleteAdoption", () => {
   describe("rollback on error", () => {
     it("restores previous cache state when mutation fails", async () => {
       const { queryClient, wrapper } = createWrapper();
-      // Seed cache with the original adoption state
-      queryClient.setQueryData<AdoptionDetails>(["adoption", "fail"], MOCK_ADOPTION);
+      // Seed cache with an adoption whose id matches the hook argument
+      const failAdoption: AdoptionDetails = { ...MOCK_ADOPTION, id: "fail" };
+      queryClient.setQueryData<AdoptionDetails>(["adoption", "fail"], failAdoption);
 
       const { result } = renderHook(
         () => useMutateCompleteAdoption("fail"),
@@ -183,7 +188,7 @@ describe("useMutateCompleteAdoption", () => {
 
       await waitFor(() => expect(result.current.isError).toBe(true));
 
-      // After failure, cache should be restored to original state
+      // After failure, cache should be restored to the original state
       const restoredData = queryClient.getQueryData<AdoptionDetails>([
         "adoption",
         "fail",

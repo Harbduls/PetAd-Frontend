@@ -14,7 +14,7 @@ interface AdminDisputeResolutionFormProps {
 }
 
 export function AdminDisputeResolutionForm({ onSubmit, isSubmitting = false }: AdminDisputeResolutionFormProps) {
-  const [resolutionType, setResolutionType] = useState<ResolutionType>(null);
+  const [resolutionType, setResolutionType] = useState<ResolutionType>('REFUND');
   const [adopterSplit, setAdopterSplit] = useState<number>(50);
   const [adminNote, setAdminNote] = useState<string>('');
 

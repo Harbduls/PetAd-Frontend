@@ -10,14 +10,9 @@ import {
 import { renderHook, waitFor, act } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
-import { setupServer } from "msw/node";
-import {
-  escrowStatusHandler,
-  setEscrowStatus,
-} from "../../../test/msw/handlers";
+import { server } from "../../../mocks/server";
+import { http, HttpResponse } from "msw";
 import { useEscrowStatus } from "../useEscrowStatus";
-
-const server = setupServer(escrowStatusHandler);
 
 function createTestQueryClient() {
   return new QueryClient({
@@ -36,38 +31,45 @@ function createWrapper(queryClient: QueryClient) {
   );
 }
 
-beforeAll(() => server.listen());
 afterEach(() => {
-  server.resetHandlers();
   vi.restoreAllMocks();
 });
-afterAll(() => server.close());
 
 describe("useEscrowStatus", () => {
   it("stops polling when status is SETTLED", async () => {
     const queryClient = createTestQueryClient();
-    setEscrowStatus("SETTLED");
+    const escrowId = "escrow-settled-" + Math.random().toString(36).substring(2, 5);
+    server.use(
+      http.get(new RegExp(`/api/escrow/${escrowId}/status$`), () => {
+        return HttpResponse.json({ id: escrowId, status: "SETTLED" });
+      }),
+    );
     const fetchSpy = vi.spyOn(globalThis, "fetch");
 
-    renderHook(() => useEscrowStatus("escrow-1", { intervalMs: 50 }), {
+    renderHook(() => useEscrowStatus(escrowId, { intervalMs: 50 }), {
       wrapper: createWrapper(queryClient),
     });
 
     await waitFor(() => expect(fetchSpy).toHaveBeenCalledTimes(1));
 
     const callCount = fetchSpy.mock.calls.length;
-		await act(async () => {
-			await new Promise((resolve) => setTimeout(resolve, 200));
-		});
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 200));
+    });
     expect(fetchSpy).toHaveBeenCalledTimes(callCount);
   });
 
   it("continues polling when status is FUNDED", async () => {
     const queryClient = createTestQueryClient();
-    setEscrowStatus("FUNDED");
+    const escrowId = "escrow-funded-" + Math.random().toString(36).substring(2, 5);
+    server.use(
+      http.get(new RegExp(`/api/escrow/${escrowId}/status$`), () => {
+        return HttpResponse.json({ id: escrowId, status: "FUNDED" });
+      }),
+    );
     const fetchSpy = vi.spyOn(globalThis, "fetch");
 
-    renderHook(() => useEscrowStatus("escrow-2", { intervalMs: 50 }), {
+    renderHook(() => useEscrowStatus(escrowId, { intervalMs: 50 }), {
       wrapper: createWrapper(queryClient),
     });
 

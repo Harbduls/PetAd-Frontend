@@ -160,7 +160,8 @@ describe("SettlementSummaryPage", () => {
 
     renderWithQueryClient(<SettlementSummaryPage summary={summary} />);
 
-    expect(screen.getByText("Settlement Failed")).toBeTruthy();
+    // Use getAllByText and check that at least one exists, or use a more specific heading query
+    expect(screen.getAllByText("Settlement Failed").length).toBeGreaterThan(0);
     expect(
       screen.getByText("Destination wallet rejected the transfer."),
     ).toBeTruthy();

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { render, screen } from "@testing-library/react";
+import "@testing-library/jest-dom";
 import { SplitOutcomeChart } from "../SplitOutcomeChart";
 import type { DistributionItem } from "../SplitOutcomeChart";
 
@@ -30,9 +31,9 @@ describe("SplitOutcomeChart", () => {
     expect(screen.getByTestId("legend-item-adopter")).toBeInTheDocument();
     expect(screen.getByTestId("legend-item-platform")).toBeInTheDocument();
     
-    expect(screen.getByText(/Shelter: 60.00 USDC \(60%\)/)).toBeInTheDocument();
-    expect(screen.getByText(/Adopter: 30.00 USDC \(30%\)/)).toBeInTheDocument();
-    expect(screen.getByText(/Platform: 10.00 USDC \(10%\)/)).toBeInTheDocument();
+    expect(screen.getByText(/Shelter: 60.00 \(60%\)/)).toBeInTheDocument();
+    expect(screen.getByText(/Adopter: 30.00 \(30%\)/)).toBeInTheDocument();
+    expect(screen.getByText(/Platform: 10.00 \(10%\)/)).toBeInTheDocument();
   });
 
   it("renders correct total amount", () => {

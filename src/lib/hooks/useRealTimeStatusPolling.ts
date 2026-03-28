@@ -61,15 +61,20 @@ export function useRealTimeStatusPolling(
     if (previousStatusRef.current !== currentStatus) {
       previousStatusRef.current = currentStatus;
 
-      const startTimer = setTimeout(() => {
+      // Defer setState to avoid synchronous state update in effect body
+      const timer = setTimeout(() => {
         setStatusChanged(true);
-        const endTimer = setTimeout(() => {
-          setStatusChanged(false);
-        }, 3000);
-        return () => clearTimeout(endTimer);
       }, 0);
 
-      return () => clearTimeout(startTimer);
+      // Reset the flag after 3 seconds
+      const resetTimer = setTimeout(() => {
+        setStatusChanged(false);
+      }, 3000);
+
+      return () => {
+        clearTimeout(timer);
+        clearTimeout(resetTimer);
+      };
     }
   }, [query.data?.status]);
 

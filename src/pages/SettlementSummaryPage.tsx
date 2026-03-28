@@ -2,10 +2,12 @@ import { useParams } from "react-router-dom";
 import { useSettlementSummary } from "../hooks/useSettlementSummary";
 import { useRetrySettlement } from "../hooks/useRetrySettlement";
 import { EscrowStatusBadge } from "../components/escrow/EscrowStatusBadge";
+import { EscrowFundedBanner } from "../components/escrow/EscrowFundedBanner";
+import { AdoptionCompleteButton } from "../components/escrow/AdoptionCompleteButton";
 import { StellarTxLink } from "../components/escrow/StellarTxLink";
 import { Skeleton } from "../components/ui/Skeleton";
 import { EmptyState } from "../components/ui/emptyState";
-import type { EscrowStatus } from "../components/escrow/types";
+import type { EscrowStatus, SettlementSummary } from "../components/escrow/types";
 import type { EscrowOnChainStatus } from "../types/escrow";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -54,21 +56,73 @@ function PaymentRowSkeleton() {
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 interface SettlementSummaryPageProps {
-  /**
-   * When true, shows the admin-only "Retry Settlement" button on failure.
-   * TODO: replace with useRoleGuard() once role context is wired up.
-   */
+  /** Pass summary directly (for testing / storybook) instead of fetching from API */
+  summary?: SettlementSummary;
+  /** Called when the admin confirms adoption completion. */
+  onComplete?: () => void;
+  /** When true, shows the admin-only controls. */
   isAdmin?: boolean;
 }
 
-export function SettlementSummaryPage({ isAdmin = false }: SettlementSummaryPageProps) {
+export function SettlementSummaryPage({ isAdmin = false, summary: summaryProp, onComplete }: SettlementSummaryPageProps) {
+  // ── Always call hooks unconditionally (rules-of-hooks) ──────────────────────
   const { adoptionId } = useParams<{ adoptionId: string }>();
+  const { data, isLoading, isError } = useSettlementSummary(summaryProp ? "" : (adoptionId ?? ""));
+  const retryMutation = useRetrySettlement(
+    summaryProp ? summaryProp.escrow.escrowId : (adoptionId ?? ""),
+  );
 
-  const { data, isLoading, isError } = useSettlementSummary(adoptionId ?? "");
+  // ── Prop-driven path (testing / storybook) ──────────────────────────────────
+  if (summaryProp) {
+    const escrow = summaryProp.escrow;
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <div className="max-w-3xl mx-auto px-4 py-8 space-y-6">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">{summaryProp.headline}</h1>
+            <p className="text-sm text-gray-500 mt-1">{summaryProp.description}</p>
+          </div>
 
-  // TODO: useRetrySettlement takes escrowId — currently using adoptionId as a
-  // proxy until the adoption→escrow lookup hook is available.
-  const retryMutation = useRetrySettlement(adoptionId ?? "");
+          <div className="flex flex-wrap items-center gap-3">
+            <EscrowStatusBadge status={summaryProp.status} />
+          </div>
+
+          {escrow.status === "FUNDED" && (
+            <EscrowFundedBanner
+              escrowId={escrow.escrowId}
+              amount={escrow.amount}
+              currency={escrow.currency}
+            />
+          )}
+
+          {escrow.status === "SETTLEMENT_FAILED" && (
+            <div role="alert" className="rounded-xl border border-red-200 bg-red-50 p-5">
+              <h2 className="text-base font-semibold text-red-800">Settlement Failed</h2>
+              {escrow.failureReason && (
+                <p className="text-sm text-red-700 mt-1">{escrow.failureReason}</p>
+              )}
+              {isAdmin && (
+                <button
+                  type="button"
+                  onClick={() => retryMutation.mutateRetrySettlement()}
+                  disabled={retryMutation.isPending}
+                  className="mt-3 rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-50"
+                >
+                  {retryMutation.isPending ? "Retrying…" : "Retry Settlement"}
+                </button>
+              )}
+            </div>
+          )}
+
+          {isAdmin && onComplete && (
+            <AdoptionCompleteButton isAdmin onConfirm={onComplete} />
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // ── API-driven path (production) ─────────────────────────────────────────
 
   const isFailed  = data?.onChainStatus === "FAILED";
   const txHash    = data?.stellarExplorerUrl

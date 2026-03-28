@@ -2,6 +2,9 @@ import { useState } from "react";
 import { formatAmount } from "./types";
 import { getEscrowFundedBannerStorageKey } from "./escrowBannerConstants";
 
+// Re-export for backwards compatibility with existing imports
+export { getEscrowFundedBannerStorageKey };
+
 interface EscrowFundedBannerProps {
   escrowId: string;
   amount: number;

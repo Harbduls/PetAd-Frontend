@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useQuery, type QueryKey } from "@tanstack/react-query";
 
 export interface UsePollingOptions<TData> {
@@ -18,6 +18,8 @@ export function usePolling<TData>(
 		typeof document !== "undefined" ? !document.hidden : true,
 	);
 	const [shouldStop, setShouldStop] = useState(false);
+	// Ref mirrors shouldStop so refetchInterval sees updated value synchronously
+	const shouldStopRef = useRef(false);
 
 	// Handle visibility change
 	useEffect(() => {
@@ -41,8 +43,14 @@ export function usePolling<TData>(
 		refetchInterval: (query) => {
 			const data = query.state.data;
 
+			// Check synchronously via ref first (avoids waiting for re-render)
+			if (shouldStopRef.current) {
+				return false;
+			}
+
 			// Check if we should stop polling based on data condition
 			if (stopWhen && data && stopWhen(data)) {
+				shouldStopRef.current = true;
 				setShouldStop(true);
 				return false;
 			}
