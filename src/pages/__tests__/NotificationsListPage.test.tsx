@@ -11,7 +11,7 @@ beforeAll(() => {
     observe = vi.fn();
     unobserve = vi.fn();
     disconnect = vi.fn();
-    constructor(_callback: IntersectionObserverCallback) {}
+    constructor(..._args: unknown[]) {}
   }
   vi.stubGlobal("IntersectionObserver", MockIntersectionObserver);
 });
