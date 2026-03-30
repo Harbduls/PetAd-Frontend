@@ -13,7 +13,7 @@ export function useSubmitSignature() {
   const [isPending, setIsPending] = useState(false);
 
   const mutateSubmitSignature = async (
-    payload: SubmitSignaturePayload,
+    _payload: SubmitSignaturePayload,
     onSuccess?: () => void
   ) => {
     setIsPending(true);
