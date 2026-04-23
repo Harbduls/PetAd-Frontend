@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React from 'react';
 import { CheckCircle2, Users } from 'lucide-react';
 import { StellarTxLink } from '../ui/StellarTxLink';
 
@@ -22,11 +22,8 @@ export const ApprovalStatusWidget: React.FC<ApprovalStatusWidgetProps> = ({
   required,
   escrowAccountId,
 }) => {
-  const isQuorumMet = useMemo(() => received >= required, [received, required]);
-  const percentage = useMemo(
-    () => Math.min(Math.round((received / required) * 100), 100),
-    [received, required]
-  );
+  const isQuorumMet = received >= required;
+  const percentage = Math.min(Math.round((received / required) * 100), 100);
 
   // Smooth progress bar color transition
   const barColorClass = isQuorumMet ? 'bg-green-500' : 'bg-blue-500';
